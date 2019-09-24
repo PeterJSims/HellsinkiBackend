@@ -25,8 +25,31 @@ let persons = [
 	}
 ];
 
+app.get('/info', (req, res) => {
+	res.send(`
+    <div>
+    Phonebook has info for ${persons.length} people
+    </div>
+    <br>
+    <div>
+    ${Date()}
+    </div>`);
+});
+
 app.get('/api/persons', (req, res) => {
 	res.send(persons);
+});
+
+app.get('/api/persons/:id', (req, res) => {
+	let id = Number(req.params.id);
+
+	const person = persons.find((person) => person.id === id);
+
+	if (person) {
+		res.json(person);
+	} else {
+		res.status(404).send('Entry not found').end();
+	}
 });
 
 const PORT = 3001;
