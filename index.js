@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
 
 const generateId = () => {
-	return Math.floor(Math.random() * 500);
+	return Math.floor(Math.random() * 50000);
 };
 
 let persons = [
@@ -75,7 +75,6 @@ app.post('/api/persons', (req, res) => {
 	const person = {
 		name: body.name,
 		number: body.number,
-		// date: new Date(),
 		id: generateId()
 	};
 
