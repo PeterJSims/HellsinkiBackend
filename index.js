@@ -60,9 +60,11 @@ app.get('/api/persons/:id', (req, res) => {
 
 app.post('/api/persons', (req, res) => {
 	const body = req.body;
-	console.log(body);
 	if (!body.name) {
 		return res.status(400).json({ error: 'content missing' });
+	}
+	if (persons.some((person) => person.name === body.name)) {
+		return res.status(400).json({ error: 'entry already exists' });
 	}
 
 	const person = {
