@@ -2,18 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 const app = express();
 const Person = require('./models/person');
+
+mongoose.set('useFindAndModify', false);
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 
 app.use(express.static('build'));
 app.use(bodyParser.json());
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
-
-// const generateId = () => {
-// 	return Math.floor(Math.random() * 50000);
-// };
 
 let persons = [
 	{
@@ -39,14 +38,16 @@ let persons = [
 ];
 
 app.get('/info', (req, res) => {
-	res.send(`
+	Person.find({}).then((persons) =>
+		res.send(`
     <div>
     Phonebook has info for ${persons.length} people
     </div>
     <br>
     <div>
     ${Date()}
-    </div>`);
+    </div>`)
+	);
 });
 
 app.get('/api/persons', (req, res) => {
@@ -83,6 +84,25 @@ app.post('/api/persons', (req, res) => {
 	person.save().then((savedPerson) => {
 		res.json(savedPerson.toJSON());
 	});
+});
+
+app.put('/api/persons/:id', (req, res, next) => {
+	const body = req.body;
+
+	if (!body.name) {
+		return res.status(400).json({ error: 'name missing' });
+	}
+
+	const person = {
+		name: body.name,
+		number: body.number
+	};
+
+	Person.findByIdAndUpdate(req.params.id, person, { new: true })
+		.then((updatedPerson) => {
+			res.json(updatedPerson.toJSON());
+		})
+		.catch((error) => next(error));
 });
 
 app.delete('/api/persons/:id', (req, res, next) => {
