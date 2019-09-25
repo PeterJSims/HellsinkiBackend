@@ -55,10 +55,16 @@ app.get('/api/persons', (req, res) => {
 	});
 });
 
-app.get('/api/persons/:id', (req, res) => {
-	Person.findById(req.params.id).then((person) => {
-		res.json(person.toJSON());
-	});
+app.get('/api/persons/:id', (req, res, next) => {
+	Person.findById(req.params.id)
+		.then((person) => {
+			if (person) {
+				res.json(person.toJSON());
+			} else {
+				res.status(404).end();
+			}
+		})
+		.catch((err) => next(err));
 });
 
 app.post('/api/persons', (req, res) => {
@@ -79,13 +85,27 @@ app.post('/api/persons', (req, res) => {
 	});
 });
 
-app.delete('/api/persons/:id', (req, res) => {
-	let id = Number(req.params.id);
-
-	persons = persons.filter((person) => person.id !== id);
-
-	res.status(204).end();
+app.delete('/api/persons/:id', (req, res, next) => {
+	Person.findByIdAndRemove(req.params.id)
+		.then((result) => {
+			res.status(204).end();
+		})
+		.catch((error) => next(error));
 });
+
+//Middlewares
+
+const errorHandler = (error, request, response, next) => {
+	console.error(error.message);
+
+	if (error.name === 'CastError' && error.kind === 'ObjectId') {
+		return response.status(400).send({ error: 'Check ID format' });
+	}
+
+	next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
