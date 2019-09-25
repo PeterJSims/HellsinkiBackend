@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const app = express();
+const Person = require('./models/person');
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 
@@ -9,9 +11,9 @@ app.use(express.static('build'));
 app.use(bodyParser.json());
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
 
-const generateId = () => {
-	return Math.floor(Math.random() * 50000);
-};
+// const generateId = () => {
+// 	return Math.floor(Math.random() * 50000);
+// };
 
 let persons = [
 	{
@@ -48,19 +50,15 @@ app.get('/info', (req, res) => {
 });
 
 app.get('/api/persons', (req, res) => {
-	res.send(persons);
+	Person.find({}).then((persons) => {
+		res.json(persons.map((person) => person.toJSON()));
+	});
 });
 
 app.get('/api/persons/:id', (req, res) => {
-	let id = Number(req.params.id);
-
-	const person = persons.find((person) => person.id === id);
-
-	if (person) {
-		res.json(person);
-	} else {
-		res.status(404).send('Entry not found').end();
-	}
+	Person.findById(req.params.id).then((person) => {
+		res.json(person.toJSON());
+	});
 });
 
 app.post('/api/persons', (req, res) => {
@@ -72,15 +70,13 @@ app.post('/api/persons', (req, res) => {
 		return res.status(400).json({ error: 'entry already exists' });
 	}
 
-	const person = {
+	const person = new Person({
 		name: body.name,
-		number: body.number,
-		id: generateId()
-	};
-
-	persons = persons.concat(person);
-
-	res.json(person);
+		number: body.number
+	});
+	person.save().then((savedPerson) => {
+		res.json(savedPerson.toJSON());
+	});
 });
 
 app.delete('/api/persons/:id', (req, res) => {
