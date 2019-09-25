@@ -68,7 +68,7 @@ app.get('/api/persons/:id', (req, res, next) => {
 		.catch((err) => next(err));
 });
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
 	const body = req.body;
 	if (!body.name) {
 		return res.status(400).json({ error: 'content missing' });
@@ -81,9 +81,12 @@ app.post('/api/persons', (req, res) => {
 		name: body.name,
 		number: body.number
 	});
-	person.save().then((savedPerson) => {
-		res.json(savedPerson.toJSON());
-	});
+	person
+		.save()
+		.then((savedPerson) => {
+			res.json(savedPerson.toJSON());
+		})
+		.catch((err) => next(err));
 });
 
 app.put('/api/persons/:id', (req, res, next) => {
