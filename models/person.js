@@ -5,16 +5,29 @@ const url = process.env.MONGODB_URI;
 console.log('connecting to', url);
 
 mongoose
-	.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
+	.connect(url, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+		useCreateIndex: true
+	})
 	.then((res) => {
 		console.log('Connected to MongoDB');
 	})
 	.catch((error) => console.log('error connecting', error));
 
-const personSchema = {
-	name: String,
-	number: String
-};
+const personSchema = new mongoose.Schema({
+	name: {
+		type: String,
+		required: true,
+		minlength: 3,
+		unique: true
+	},
+	number: {
+		type: String,
+		minlength: 7,
+		required: true
+	}
+});
 
 personSchema.set('toJSON', {
 	transform: (document, returnedObject) => {

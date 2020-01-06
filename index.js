@@ -1,21 +1,18 @@
 require('dotenv').config();
 const express = require('express');
-const app = express();
-const morgan = require('morgan');
-const cors = require('cors');
 const bodyParser = require('body-parser');
+const morgan = require('morgan');
+const mongoose = require('mongoose');
+const app = express();
 const Person = require('./models/person');
+
+mongoose.set('useFindAndModify', false);
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 
-app.use(bodyParser.json());
 app.use(express.static('build'));
-app.use(cors());
+app.use(bodyParser.json());
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
-
-const generateId = () => {
-	return Math.floor(Math.random() * 100000);
-};
 
 let persons = [
 	{
@@ -37,16 +34,20 @@ let persons = [
 		name: 'Mary Poppendieck',
 		number: '39-23-6423122',
 		id: 4
-	},
-	{
-		name: 'Peter Sims',
-		number: '555-5555',
-		id: 5
 	}
 ];
 
-app.get('/', (req, res) => {
-	res.send('<h1>Hello world!</h1>');
+app.get('/info', (req, res) => {
+	Person.find({}).then((persons) =>
+		res.send(`
+    <div>
+    Phonebook has info for ${persons.length} people
+    </div>
+    <br>
+    <div>
+    ${Date()}
+    </div>`)
+	);
 });
 
 app.get('/api/persons', (req, res) => {
@@ -55,41 +56,79 @@ app.get('/api/persons', (req, res) => {
 	});
 });
 
-app.get('/info', (req, res) => {
-	res.send(`<div><p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p></div>`);
+app.get('/api/persons/:id', (req, res, next) => {
+	Person.findById(req.params.id)
+		.then((person) => {
+			if (person) {
+				res.json(person.toJSON());
+			} else {
+				res.status(404).end();
+			}
+		})
+		.catch((err) => next(err));
 });
 
-app.get('/api/persons/:id', (req, res) => {
-	Person.findById(req.params.id).then((person) => {
-		res.json(person.toJSON());
-	});
-});
-
-app.post('/api/persons', (req, res) => {
-	if (!req.body.name || !req.body.number) {
+app.post('/api/persons', (req, res, next) => {
+	const body = req.body;
+	if (!body.name) {
 		return res.status(400).json({ error: 'content missing' });
 	}
-
-	if (persons.some((person) => person.name === req.body.name)) {
+	if (persons.some((person) => person.name === body.name)) {
 		return res.status(400).json({ error: 'entry already exists' });
 	}
 
+	const person = new Person({
+		name: body.name,
+		number: body.number
+	});
+	person
+		.save()
+		.then((savedPerson) => {
+			res.json(savedPerson.toJSON());
+		})
+		.catch((err) => next(err));
+});
+
+app.put('/api/persons/:id', (req, res, next) => {
+	const body = req.body;
+
+	if (!body.name) {
+		return res.status(400).json({ error: 'name missing' });
+	}
+
 	const person = {
-		name: req.body.name,
-		number: req.body.number,
-		id: generateId()
+		name: body.name,
+		number: body.number
 	};
 
-	person.save().then((savedPerson) => {
-		res.json(savedPerson.toJSON());
-	});
+	Person.findByIdAndUpdate(req.params.id, person, { new: true })
+		.then((updatedPerson) => {
+			res.json(updatedPerson.toJSON());
+		})
+		.catch((error) => next(error));
 });
 
-app.delete('/api/persons/:id', (req, res) => {
-	Person.findByIdAndRemove(req.params.id).then((result) => {
-		res.status(204).end();
-	});
+app.delete('/api/persons/:id', (req, res, next) => {
+	Person.findByIdAndRemove(req.params.id)
+		.then((result) => {
+			res.status(204).end();
+		})
+		.catch((error) => next(error));
 });
+
+//Middlewares
+
+const errorHandler = (error, request, response, next) => {
+	console.error(error.message);
+
+	if (error.name === 'CastError' && error.kind === 'ObjectId') {
+		return response.status(400).send({ error: 'Check ID format' });
+	}
+
+	next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
