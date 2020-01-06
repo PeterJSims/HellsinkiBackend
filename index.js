@@ -1,11 +1,14 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
+const cors = require('cors');
 const bodyParser = require('body-parser');
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 
 app.use(bodyParser.json());
+app.use(express.static('build'));
+app.use(cors());
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
 
 const generateId = () => {
@@ -44,7 +47,7 @@ app.get('/', (req, res) => {
 	res.send('<h1>Hello world!</h1>');
 });
 
-app.get('/persons', (req, res) => {
+app.get('/api/persons', (req, res) => {
 	res.json(persons);
 });
 
@@ -52,13 +55,13 @@ app.get('/info', (req, res) => {
 	res.send(`<div><p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p></div>`);
 });
 
-app.get('/persons/:id', (req, res) => {
+app.get('/api/persons/:id', (req, res) => {
 	let id = Number(req.params.id);
 	const person = persons.find((person) => person.id === id);
 	res.json(person);
 });
 
-app.post('/persons', (req, res) => {
+app.post('/api/persons', (req, res) => {
 	if (!req.body.name || !req.body.number) {
 		return res.status(400).json({ error: 'content missing' });
 	}
@@ -77,14 +80,14 @@ app.post('/persons', (req, res) => {
 	res.json(person);
 });
 
-app.delete('/persons/:id', (req, res) => {
+app.delete('/api/persons/:id', (req, res) => {
 	let id = Number(req.params.id);
 	persons = persons.filter((person) => person.id !== id);
 
 	res.status(204).end();
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);
 });
